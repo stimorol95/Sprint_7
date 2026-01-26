@@ -1,39 +1,20 @@
-import random
-import string
+import pytest
+from helpers.api_client import APIHelper
+from helpers.data_generator import generate_courier_data
 
 
-def generate_random_string(length):
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
+@pytest.fixture
+def api_client():
+    """Фикстура для создания API клиента"""
+    return APIHelper()
 
-
-def generate_courier_data():
-    return {
-        "login": generate_random_string(10),
-        "password": generate_random_string(10),
-        "firstName": generate_random_string(10)
-    }
-
-
-def generate_order_data(color=None):
-    def random_phone():
-        return "+7" + ''.join([str(random.randint(0, 9)) for _ in range(10)])
-    
-    data = {
-        "firstName": generate_random_string(10),
-        "lastName": generate_random_string(10),
-        "address": generate_random_string(20),
-        "metroStation": random.randint(1, 10),
-        "phone": random_phone(),
-        "rentTime": random.randint(1, 7),
-        "deliveryDate": "2024-12-31",
-        "comment": generate_random_string(20)
-    }
-    
-    if color is not None:
-        if isinstance(color, list):
-            data["color"] = color
-        else:
-            data["color"] = [color]
-    
-    return data
+@pytest.fixture
+def create_courier():
+    """Фикстура для создания и удаления курьера"""
+    api = APIHelper()
+    data = generate_courier_data()
+    create_result = api.courier.create_courier(data)
+    if create_result["status_code"] != 201:
+        pytest.skip(f"Не удалось создать курьера: {create_result['status_code']}")
+    yield data, api
+    api.courier.delete_courier_by_credentials(data["login"], data["password"])
